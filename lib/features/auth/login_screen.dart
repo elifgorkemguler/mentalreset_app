@@ -93,7 +93,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 PrimaryGradientButton(
                   label: _tab == 0 ? 'Login' : 'Create account',
                   trailingIcon: Icons.arrow_forward_rounded,
-                  onPressed: () => context.go(AppRoutes.onboardingIntent),
+                  onPressed: () => context.go(
+                    _tab == 0 ? AppRoutes.home : AppRoutes.onboardingWelcome,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Row(

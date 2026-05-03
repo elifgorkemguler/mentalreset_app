@@ -1,56 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../../models/activity_entry.dart';
+import '../../models/concern_metric.dart';
 import '../../models/focus_session.dart';
-import '../../models/intent_option.dart';
+import '../../models/insight_stat.dart';
 import '../../models/mood.dart';
 import '../../models/task_item.dart';
-import '../../models/thought.dart';
 import '../theme/app_colors.dart';
 
 class MockData {
   MockData._();
 
   static const String userName = 'Elif';
-
-  static const List<IntentOption> intents = [
-    IntentOption(
-      id: 'calm',
-      label: 'Calm down',
-      description: 'Slow the racing thoughts',
-      emoji: '🌿',
-      accent: AppColors.accentMint,
-    ),
-    IntentOption(
-      id: 'recharge',
-      label: 'Recharge energy',
-      description: 'Find a gentle lift',
-      emoji: '🌞',
-      accent: AppColors.accentPeach,
-    ),
-    IntentOption(
-      id: 'clear',
-      label: 'Clear my mind',
-      description: 'Sort the mental clutter',
-      emoji: '🪞',
-      accent: AppColors.accentLavender,
-    ),
-    IntentOption(
-      id: 'seen',
-      label: 'Feel seen',
-      description: 'Be heard, without judgment',
-      emoji: '💗',
-      accent: AppColors.accentRose,
-    ),
-  ];
-
-  static const List<Mood> onboardingMoods = [
-    Mood(id: 'calm', label: 'Calm', emoji: '😌', accent: AppColors.accentMint),
-    Mood(id: 'anxious', label: 'Anxious', emoji: '😟', accent: AppColors.accentPeach),
-    Mood(id: 'empty', label: 'Empty', emoji: '🫥', accent: AppColors.accentLavender),
-    Mood(id: 'excited', label: 'Excited', emoji: '✨', accent: AppColors.accentRose),
-    Mood(id: 'tired', label: 'Tired', emoji: '😴', accent: AppColors.accentSky),
-  ];
 
   static const List<Mood> homeMoods = [
     Mood(id: 'calm', label: 'Calm', emoji: '😌', accent: AppColors.accentMint),
@@ -61,51 +22,14 @@ class MockData {
     Mood(id: 'tired', label: 'Tired', emoji: '😴', accent: AppColors.surfaceMuted),
   ];
 
-  static List<Thought> releaseThoughts = [
-    Thought(
-      id: 't1',
-      text: "I keep replaying that awkward meeting from this morning.",
-      intensity: ThoughtIntensity.high,
-      kind: ThoughtKind.release,
-      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-    ),
-    Thought(
-      id: 't2',
-      text: "What if I'm falling behind on everything this week?",
-      intensity: ThoughtIntensity.high,
-      kind: ThoughtKind.release,
-      createdAt: DateTime.now().subtract(const Duration(hours: 4)),
-    ),
-    Thought(
-      id: 't3',
-      text: "Worried I forgot to reply to that one email.",
-      intensity: ThoughtIntensity.medium,
-      kind: ThoughtKind.release,
-      createdAt: DateTime.now().subtract(const Duration(hours: 6)),
-    ),
-    Thought(
-      id: 't4',
-      text: "Annoyed about the noisy neighbours last night.",
-      intensity: ThoughtIntensity.medium,
-      kind: ThoughtKind.release,
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    Thought(
-      id: 't5',
-      text: "Small lingering guilt about skipping the gym.",
-      intensity: ThoughtIntensity.low,
-      kind: ThoughtKind.release,
-      createdAt: DateTime.now().subtract(const Duration(days: 1, hours: 3)),
-    ),
-  ];
-
   static List<TaskItem> tasks = const [
     TaskItem(
       id: 'task1',
       title: 'Finish assignment outline',
       category: TaskCategory.school,
-      estimated: Duration(minutes: 45),
+      estimated: Duration(minutes: 30),
       whyItMatters: 'Clears space for the deeper writing tomorrow.',
+      flagged: true,
     ),
     TaskItem(
       id: 'task2',
@@ -124,18 +48,68 @@ class MockData {
       id: 'task4',
       title: 'Call mom about weekend plans',
       category: TaskCategory.family,
-      estimated: Duration(minutes: 20),
-      whyItMatters: 'A small call, a big lift for both of you.',
-    ),
-    TaskItem(
-      id: 'task5',
-      title: 'Tidy desk before deep work',
-      category: TaskCategory.personal,
       estimated: Duration(minutes: 10),
+      whyItMatters: 'A small call, a big lift for both of you.',
     ),
   ];
 
   static const List<FocusSession> focusSessions = [];
+
+  static const List<InsightStat> insightStats = [
+    InsightStat(
+      label: 'Releases',
+      value: '17',
+      supportingText: '↗ +12% this week',
+      icon: Icons.air_rounded,
+      iconBackground: AppColors.accentMint,
+      iconForeground: AppColors.accentMintDeep,
+      isPositiveTrend: true,
+    ),
+    InsightStat(
+      label: 'Tasks',
+      value: '20',
+      supportingText: '↗ +25% this week',
+      icon: Icons.task_alt_rounded,
+      iconBackground: AppColors.accentPeach,
+      iconForeground: AppColors.accentPeachDeep,
+      isPositiveTrend: true,
+    ),
+    InsightStat(
+      label: 'Focus',
+      value: '5.3h',
+      supportingText: '↗ +8% this week',
+      icon: Icons.bolt_rounded,
+      iconBackground: AppColors.accentLavender,
+      iconForeground: AppColors.primary,
+      isPositiveTrend: true,
+    ),
+    InsightStat(
+      label: 'Streak',
+      value: '12',
+      supportingText: 'Personal best',
+      icon: Icons.local_fire_department_rounded,
+      iconBackground: AppColors.accentPeach,
+      iconForeground: AppColors.accentPeachDeep,
+    ),
+  ];
+
+  static const List<ConcernMetric> concerns = [
+    ConcernMetric(
+      label: 'Work stress',
+      percentage: 45,
+      color: AppColors.primary,
+    ),
+    ConcernMetric(
+      label: 'School pressure',
+      percentage: 30,
+      color: AppColors.accentRoseDeep,
+    ),
+    ConcernMetric(
+      label: 'Social anxiety',
+      percentage: 25,
+      color: AppColors.accentMintDeep,
+    ),
+  ];
 
   static List<ActivityEntry> recentActivity = [
     ActivityEntry(

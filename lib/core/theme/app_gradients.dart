@@ -7,19 +7,19 @@ class AppGradients {
   static const LinearGradient primary = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [AppColors.primary, AppColors.secondary],
+    colors: [AppColors.primary, AppColors.primaryLight],
   );
 
   static const LinearGradient primaryDeep = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [AppColors.primaryDeep, AppColors.secondaryDeep],
+    colors: [AppColors.primaryDeep, AppColors.primary],
   );
 
   static const LinearGradient softBackground = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFFFAF8FF), Color(0xFFF3EFFB)],
+    colors: [Color(0xFFF6F6F8), Color(0xFFEFEFF3)],
   );
 
   static const LinearGradient calm = LinearGradient(

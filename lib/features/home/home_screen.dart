@@ -12,6 +12,7 @@ import '../../widgets/capture_action_button.dart';
 import '../../widgets/mood_chip_card.dart';
 import '../../widgets/section_header.dart';
 import '../../widgets/soft_card.dart';
+import 'voice_capture_modal.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -184,48 +185,6 @@ class _ThoughtCaptureCard extends StatelessWidget {
   }
 
   void _openVoiceModal(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _VoiceCapturePlaceholder(),
-    );
-  }
-}
-
-class _VoiceCapturePlaceholder extends StatelessWidget {
-  const _VoiceCapturePlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 44,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(99),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text('Capture Your Thoughts', style: AppTextStyles.titleLarge),
-            const SizedBox(height: AppSpacing.lg),
-            Text('Voice modal coming in phase 2.',
-                style: AppTextStyles.bodyMedium, textAlign: TextAlign.center),
-            const SizedBox(height: AppSpacing.lg),
-          ],
-        ),
-      ),
-    );
+    VoiceCaptureModal.show(context);
   }
 }

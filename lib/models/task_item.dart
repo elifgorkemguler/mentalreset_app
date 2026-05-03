@@ -21,6 +21,7 @@ class TaskItem {
   final TaskCategory category;
   final Duration estimated;
   final String? whyItMatters;
+  final bool flagged;
   final bool done;
 
   const TaskItem({
@@ -29,6 +30,7 @@ class TaskItem {
     required this.category,
     required this.estimated,
     this.whyItMatters,
+    this.flagged = false,
     this.done = false,
   });
 
@@ -38,6 +40,7 @@ class TaskItem {
         category: category,
         estimated: estimated,
         whyItMatters: whyItMatters,
+        flagged: flagged,
         done: done ?? this.done,
       );
 }

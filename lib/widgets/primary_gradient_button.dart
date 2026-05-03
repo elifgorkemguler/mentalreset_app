@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_gradients.dart';
@@ -9,6 +10,7 @@ import '../core/theme/app_text_styles.dart';
 class PrimaryGradientButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
+  final IconData? leadingIcon;
   final IconData? trailingIcon;
   final bool fullWidth;
   final bool loading;
@@ -17,6 +19,7 @@ class PrimaryGradientButton extends StatelessWidget {
     super.key,
     required this.label,
     required this.onPressed,
+    this.leadingIcon,
     this.trailingIcon,
     this.fullWidth = true,
     this.loading = false,
@@ -38,7 +41,12 @@ class PrimaryGradientButton extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(AppRadius.pill),
-            onTap: enabled ? onPressed : null,
+            onTap: enabled
+                ? () {
+                    HapticFeedback.selectionClick();
+                    onPressed!();
+                  }
+                : null,
             child: Center(
               child: loading
                   ? const SizedBox(
@@ -53,6 +61,10 @@ class PrimaryGradientButton extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        if (leadingIcon != null) ...[
+                          Icon(leadingIcon, color: AppColors.textOnPrimary, size: 20),
+                          const SizedBox(width: 8),
+                        ],
                         Text(label, style: AppTextStyles.buttonLarge),
                         if (trailingIcon != null) ...[
                           const SizedBox(width: 8),
