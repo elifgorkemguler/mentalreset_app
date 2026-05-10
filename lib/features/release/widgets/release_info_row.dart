@@ -7,12 +7,17 @@ class ReleaseInfoRow extends StatelessWidget {
 
   const ReleaseInfoRow({super.key, required this.count});
 
+  String get _countLabel {
+    final word = count == 1 ? 'thought' : 'thoughts';
+    return '$count $word ready';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text('$count thoughts ready', style: AppTextStyles.labelMedium),
+        Text(_countLabel, style: AppTextStyles.labelMedium),
         Text('Drag → trash to release', style: AppTextStyles.labelMedium),
       ],
     );

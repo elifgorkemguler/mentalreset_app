@@ -10,6 +10,14 @@ class AppGradients {
     colors: [AppColors.primary, AppColors.primaryLight],
   );
 
+  /// Brand mark gradient — purple → pink. Used ONLY for the MindFlow logo
+  /// and "MindFlow" wordmark. Don't use for buttons or generic UI.
+  static const LinearGradient logo = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+  );
+
   static const LinearGradient primaryDeep = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,

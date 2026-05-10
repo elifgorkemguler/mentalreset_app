@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 
-class MentalResetApp extends StatelessWidget {
-  const MentalResetApp({super.key});
+class MindFlowApp extends StatelessWidget {
+  const MindFlowApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +16,7 @@ class MentalResetApp extends StatelessWidget {
     ));
 
     return MaterialApp.router(
-      title: 'Mental Reset',
+      title: 'MindFlow',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: AppRouter.router,

@@ -7,7 +7,19 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 
 class WeeklyInsightCard extends StatelessWidget {
-  const WeeklyInsightCard({super.key});
+  final String title;
+  final String body;
+
+  /// Substring of [body] to render in primary purple. If absent in [body] the
+  /// whole sentence renders in muted secondary text.
+  final String highlight;
+
+  const WeeklyInsightCard({
+    super.key,
+    required this.title,
+    required this.body,
+    required this.highlight,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -42,33 +54,37 @@ class WeeklyInsightCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text("This week's pattern", style: AppTextStyles.titleMedium),
+                Text(title, style: AppTextStyles.titleMedium),
                 const SizedBox(height: 6),
-                Text.rich(
-                  TextSpan(
-                    style: AppTextStyles.bodyMedium
-                        .copyWith(color: AppColors.textSecondary, height: 1.5),
-                    children: [
-                      const TextSpan(
-                          text: 'Your focus sessions are '),
-                      TextSpan(
-                        text: '30% longer',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const TextSpan(
-                          text:
-                              ' on days you start with a mental release.'),
-                    ],
-                  ),
-                ),
+                Text.rich(_buildBody()),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  TextSpan _buildBody() {
+    final base = AppTextStyles.bodyMedium
+        .copyWith(color: AppColors.textSecondary, height: 1.5);
+    final accent = AppTextStyles.bodyMedium.copyWith(
+      color: AppColors.primary,
+      fontWeight: FontWeight.w600,
+    );
+
+    if (highlight.isEmpty || !body.contains(highlight)) {
+      return TextSpan(text: body, style: base);
+    }
+    final start = body.indexOf(highlight);
+    final end = start + highlight.length;
+    return TextSpan(
+      style: base,
+      children: [
+        TextSpan(text: body.substring(0, start)),
+        TextSpan(text: highlight, style: accent),
+        TextSpan(text: body.substring(end)),
+      ],
     );
   }
 }

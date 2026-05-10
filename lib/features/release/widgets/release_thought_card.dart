@@ -21,12 +21,11 @@ class ReleaseThoughtCard extends StatelessWidget {
     switch (thought.intensity) {
       case ThoughtIntensity.high:
         return (accent: AppColors.intensityHigh, label: 'High Intensity');
-      case ThoughtIntensity.medium:
-        return (accent: AppColors.intensityMedium, label: 'Medium Intensity');
       case ThoughtIntensity.low:
         return (accent: AppColors.intensityLow, label: 'Low Intensity');
-      case null:
-        return (accent: AppColors.textMuted, label: 'Unsorted');
+      case ThoughtIntensity.medium:
+      default:
+        return (accent: AppColors.intensityMedium, label: 'Medium Intensity');
     }
   }
 
@@ -64,7 +63,7 @@ class ReleaseThoughtCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          thought.text,
+                          thought.content,
                           style: AppTextStyles.bodyLarge.copyWith(
                             color: AppColors.textPrimary,
                             height: 1.45,

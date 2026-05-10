@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../core/constants/mock_data.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../models/task_item.dart';
+import 'data/task_recommender.dart';
 import 'widgets/todo_filter_chips.dart';
 import 'widgets/todo_header.dart';
 import 'widgets/todo_task_card.dart';
@@ -18,7 +18,7 @@ class TodoScreen extends StatefulWidget {
 
 class _TodoScreenState extends State<TodoScreen> {
   TaskCategory? _filter; // null = All
-  late final List<TaskItem> _tasks = List.of(MockData.tasks);
+  late final List<TaskItem> _tasks = TaskRecommender.recommend();
 
   List<TaskItem> get _visible {
     if (_filter == null) return _tasks;

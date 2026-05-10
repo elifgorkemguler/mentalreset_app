@@ -11,6 +11,9 @@ class AuthTextField extends StatefulWidget {
   final bool obscure;
   final TextInputType keyboardType;
   final TextEditingController? controller;
+  final Iterable<String>? autofillHints;
+  final bool? autocorrect;
+  final bool? enableSuggestions;
 
   const AuthTextField({
     super.key,
@@ -20,6 +23,9 @@ class AuthTextField extends StatefulWidget {
     this.obscure = false,
     this.keyboardType = TextInputType.text,
     this.controller,
+    this.autofillHints,
+    this.autocorrect,
+    this.enableSuggestions,
   });
 
   @override
@@ -40,6 +46,9 @@ class _AuthTextFieldState extends State<AuthTextField> {
           controller: widget.controller,
           obscureText: _hidden,
           keyboardType: widget.keyboardType,
+          autocorrect: widget.autocorrect ?? !widget.obscure,
+          enableSuggestions: widget.enableSuggestions ?? !widget.obscure,
+          autofillHints: widget.autofillHints,
           style: AppTextStyles.bodyLarge,
           decoration: InputDecoration(
             hintText: widget.hint,

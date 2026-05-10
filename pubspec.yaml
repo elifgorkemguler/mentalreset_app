@@ -1,5 +1,5 @@
 name: project484
-description: "Mental Reset — turn mental clutter into clarity."
+description: "MindFlow — turn mental clutter into clarity."
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -17,6 +17,7 @@ dependencies:
   lucide_icons: ^0.257.0
   shared_preferences: ^2.3.3
   flutter_animate: ^4.5.0
+  speech_to_text: ^7.0.0
 
 dev_dependencies:
   flutter_test:

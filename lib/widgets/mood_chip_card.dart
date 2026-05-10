@@ -45,12 +45,13 @@ class MoodChipCard extends StatelessWidget {
             onTap();
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(mood.emoji, style: const TextStyle(fontSize: 32)),
-                const SizedBox(height: 8),
+                Text(mood.emoji, style: const TextStyle(fontSize: 30)),
+                const SizedBox(height: 6),
                 Text(
                   mood.label,
                   style: AppTextStyles.labelLarge,

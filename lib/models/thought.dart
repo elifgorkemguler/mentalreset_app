@@ -1,85 +1,70 @@
-enum ThoughtIntensity { low, medium, high }
-
-enum ThoughtKind { release, action, unsorted }
-
-extension ThoughtIntensityX on ThoughtIntensity {
-  String get label {
-    switch (this) {
-      case ThoughtIntensity.high:
-        return 'High Intensity';
-      case ThoughtIntensity.medium:
-        return 'Medium Intensity';
-      case ThoughtIntensity.low:
-        return 'Low Intensity';
-    }
-  }
-
-  static ThoughtIntensity? fromName(String? value) {
-    if (value == null) return null;
-    return ThoughtIntensity.values.firstWhere(
-      (e) => e.name == value,
-      orElse: () => ThoughtIntensity.medium,
-    );
-  }
+/// Allowed values for `Thought.category`.
+abstract class ThoughtCategory {
+  static const release = 'release';
+  static const action = 'action';
+  static const unsorted = 'unsorted';
 }
 
-extension ThoughtKindX on ThoughtKind {
-  static ThoughtKind fromName(String value) {
-    return ThoughtKind.values.firstWhere(
-      (e) => e.name == value,
-      orElse: () => ThoughtKind.unsorted,
-    );
-  }
+/// Allowed values for `Thought.intensity`.
+abstract class ThoughtIntensity {
+  static const low = 'low';
+  static const medium = 'medium';
+  static const high = 'high';
 }
 
 class Thought {
   final String id;
-  final String text;
-  final ThoughtIntensity? intensity;
-  final ThoughtKind kind;
+  final String userId;
+  final String content;
+  final String category;
+  final String intensity;
+  final bool isReleased;
   final DateTime createdAt;
-  final DateTime? releasedAt;
 
   const Thought({
     required this.id,
-    required this.text,
-    required this.kind,
+    required this.userId,
+    required this.content,
+    this.category = ThoughtCategory.release,
+    this.intensity = ThoughtIntensity.medium,
+    this.isReleased = false,
     required this.createdAt,
-    this.intensity,
-    this.releasedAt,
   });
 
-  bool get isReleased => releasedAt != null;
-
   Thought copyWith({
-    ThoughtKind? kind,
-    ThoughtIntensity? intensity,
-    DateTime? releasedAt,
+    String? category,
+    String? intensity,
+    bool? isReleased,
   }) =>
       Thought(
         id: id,
-        text: text,
-        kind: kind ?? this.kind,
+        userId: userId,
+        content: content,
+        category: category ?? this.category,
         intensity: intensity ?? this.intensity,
+        isReleased: isReleased ?? this.isReleased,
         createdAt: createdAt,
-        releasedAt: releasedAt ?? this.releasedAt,
       );
 
-  factory Thought.fromJson(Map<String, dynamic> json) => Thought(
-        id: json['id'] as String,
-        text: json['text'] as String,
-        kind: ThoughtKindX.fromName(json['kind'] as String? ?? 'unsorted'),
-        intensity: ThoughtIntensityX.fromName(json['intensity'] as String?),
-        createdAt: DateTime.parse(json['created_at'] as String),
-        releasedAt: json['released_at'] == null
-            ? null
-            : DateTime.parse(json['released_at'] as String),
+  factory Thought.fromMap(Map<String, dynamic> map) => Thought(
+        id: map['id'] as String,
+        userId: (map['user_id'] as String?) ?? '',
+        content: map['content'] as String,
+        category: (map['category'] as String?) ?? ThoughtCategory.release,
+        intensity: (map['intensity'] as String?) ?? ThoughtIntensity.medium,
+        isReleased: (map['is_released'] as bool?) ?? false,
+        createdAt: DateTime.parse(map['created_at'] as String),
       );
 
-  Map<String, dynamic> toInsertJson({required String userId}) => {
+  /// Full serialization — every field, server-side names. For inserts the
+  /// `id` and `created_at` keys are usually ignored (defaults handle them).
+  Map<String, dynamic> toMap() => {
+        'id': id,
         'user_id': userId,
-        'text': text,
-        'kind': kind.name,
-        if (intensity != null) 'intensity': intensity!.name,
+        'content': content,
+        'category': category,
+        'intensity': intensity,
+        'is_released': isReleased,
+        'created_at': createdAt.toUtc().toIso8601String(),
       };
 }

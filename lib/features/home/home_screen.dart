@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/mock_data.dart';
+import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_gradients.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../data/repositories/supabase_thought_repository.dart'
+    show NotAuthenticatedException;
+import '../../data/service_locator.dart';
 import '../../widgets/activity_tile.dart';
 import '../../widgets/capture_action_button.dart';
 import '../../widgets/mood_chip_card.dart';
 import '../../widgets/section_header.dart';
 import '../../widgets/soft_card.dart';
+import '../auth/data/auth_service.dart';
+import '../auth/data/user_session.dart';
+import 'text_capture_modal.dart';
 import 'voice_capture_modal.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -26,9 +34,39 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _greeting() {
     final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (h >= 5 && h < 12) return 'Good morning';
+    if (h >= 12 && h < 17) return 'Good afternoon';
+    if (h >= 17 && h < 22) return 'Good evening';
+    return 'Good night';
+  }
+
+  Future<void> _onMoodSelected(String moodId) async {
+    setState(() => _selectedMoodId = moodId);
+
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ServiceLocator.moods.addMoodCheckin(moodId);
+      if (!mounted) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text('Mood checked in.',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textOnPrimary)),
+          backgroundColor: AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+        ));
+    } on NotAuthenticatedException catch (e) {
+      if (!mounted) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(e.toString())));
+    } catch (e) {
+      if (!mounted) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('Could not save mood: $e')));
+    }
   }
 
   @override
@@ -44,12 +82,14 @@ class _HomeScreenState extends State<HomeScreen> {
             AppSpacing.xxl,
           ),
           children: [
-            _GreetingHeader(greeting: '${_greeting()}, ${MockData.userName}'),
+            _GreetingHeader(
+              greeting: '${_greeting()}, ${UserSession.instance.displayName}',
+            ),
             const SizedBox(height: AppSpacing.xl),
             _MoodCheckInCard(
               moods: MockData.homeMoods,
               selectedId: _selectedMoodId,
-              onSelect: (id) => setState(() => _selectedMoodId = id),
+              onSelect: _onMoodSelected,
             ),
             const SizedBox(height: AppSpacing.lg),
             const _ThoughtCaptureCard(),
@@ -65,6 +105,65 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+void _showAccountSheet(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: AppColors.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
+    ),
+    builder: (sheetCtx) {
+      return SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.lg,
+            AppSpacing.xl,
+            AppSpacing.lg,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text('Your account', style: AppTextStyles.titleLarge),
+              const SizedBox(height: 4),
+              Text(
+                UserSession.instance.email ?? 'Signed in locally',
+                style: AppTextStyles.bodyMedium,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.logout_rounded,
+                    color: AppColors.error),
+                title: Text('Sign out', style: AppTextStyles.titleMedium),
+                onTap: () async {
+                  Navigator.of(sheetCtx).pop();
+                  await AuthService.instance.signOut();
+                  if (!context.mounted) return;
+                  context.go(AppRoutes.login);
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
 
 class _GreetingHeader extends StatelessWidget {
@@ -85,16 +184,23 @@ class _GreetingHeader extends StatelessWidget {
             ],
           ),
         ),
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: AppColors.surface,
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
             borderRadius: BorderRadius.circular(AppRadius.md),
-            boxShadow: AppShadows.subtle,
+            onTap: () => _showAccountSheet(context),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                boxShadow: AppShadows.subtle,
+              ),
+              child: const Icon(Icons.notifications_none_rounded,
+                  color: AppColors.textPrimary, size: 22),
+            ),
           ),
-          child: const Icon(Icons.notifications_none_rounded,
-              color: AppColors.textPrimary, size: 22),
         ),
       ],
     );
@@ -175,7 +281,7 @@ class _ThoughtCaptureCard extends StatelessWidget {
                 label: 'Write',
                 background: AppColors.accentRose,
                 iconColor: AppColors.secondaryDeep,
-                onTap: () {},
+                onTap: () => TextCaptureModal.show(context),
               ),
             ],
           ),

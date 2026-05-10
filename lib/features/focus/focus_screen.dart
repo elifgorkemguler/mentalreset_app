@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text_styles.dart';
-import '../../widgets/soft_card.dart';
+import '../../models/breathing_exercise.dart';
+import 'widgets/breathing_picker.dart';
+import 'widgets/breathing_session.dart';
 import 'widgets/focus_header.dart';
 import 'widgets/focus_mode_switch.dart';
 import 'widgets/focus_session_card.dart';
@@ -20,6 +21,7 @@ class _FocusScreenState extends State<FocusScreen> {
   FocusMode _mode = FocusMode.timer;
   SessionType _sessionType = SessionType.deepWork;
   bool _started = false;
+  BreathingExercise? _activeBreathing;
 
   static const _deepWorkDuration = Duration(minutes: 25);
   static const _breakDuration = Duration(minutes: 5);
@@ -53,7 +55,12 @@ class _FocusScreenState extends State<FocusScreen> {
               const SizedBox(height: AppSpacing.lg),
               FocusModeSwitch(
                 value: _mode,
-                onChanged: (m) => setState(() => _mode = m),
+                onChanged: (m) {
+                  setState(() {
+                    _mode = m;
+                    if (m == FocusMode.timer) _activeBreathing = null;
+                  });
+                },
               ),
               const SizedBox(height: AppSpacing.lg),
               if (_mode == FocusMode.timer)
@@ -71,39 +78,18 @@ class _FocusScreenState extends State<FocusScreen> {
                   onSkip: _skip,
                   onPrimary: _togglePrimary,
                 )
+              else if (_activeBreathing != null)
+                BreathingSession(
+                  exercise: _activeBreathing!,
+                  onExit: () => setState(() => _activeBreathing = null),
+                )
               else
-                const _BreathingPlaceholder(),
+                BreathingPicker(
+                  onPick: (ex) => setState(() => _activeBreathing = ex),
+                ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _BreathingPlaceholder extends StatelessWidget {
-  const _BreathingPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return SoftCard(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.cardPadding,
-        vertical: AppSpacing.xxl,
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.air_rounded,
-              size: 56, color: AppColors.accentSkyDeep),
-          const SizedBox(height: AppSpacing.base),
-          Text('Breathing mode', style: AppTextStyles.titleLarge),
-          const SizedBox(height: 4),
-          Text(
-            'Guided breathing exercises coming soon.',
-            style: AppTextStyles.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-        ],
       ),
     );
   }

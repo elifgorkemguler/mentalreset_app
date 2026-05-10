@@ -1,4 +1,4 @@
-# Supabase setup — Mental Reset
+# Supabase setup — MindFlow
 
 Three steps to wire the app to your Supabase project.
 

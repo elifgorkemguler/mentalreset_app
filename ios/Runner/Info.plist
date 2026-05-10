@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Mental Reset</string>
+	<string>MindFlow</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -63,9 +63,9 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Mental Reset uses the microphone so you can capture your thoughts by voice.</string>
+	<string>MindFlow uses the microphone so you can capture your thoughts by voice.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Mental Reset converts your spoken thoughts into text so you can sort and release them.</string>
+	<string>MindFlow converts your spoken thoughts into text so you can sort and release them.</string>
 	<key>UIStatusBarStyle</key>
 	<string>UIStatusBarStyleDarkContent</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>

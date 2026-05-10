@@ -2,73 +2,48 @@ import '../../models/thought.dart';
 import 'thought_repository.dart';
 
 class MockThoughtRepository implements ThoughtRepository {
-  final List<Thought> _store;
+  static const _mockUserId = 'mock-user';
 
-  MockThoughtRepository() : _store = List.of(_seed);
+  final List<Thought> _store = <Thought>[];
 
   @override
   Future<List<Thought>> fetchReleaseThoughts() async {
     await Future.delayed(const Duration(milliseconds: 200));
     return _store
-        .where((t) => t.kind == ThoughtKind.release && t.releasedAt == null)
+        .where((t) =>
+            t.category == ThoughtCategory.release && !t.isReleased)
         .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
   @override
-  Future<void> markReleased(String id) async {
-    await Future.delayed(const Duration(milliseconds: 120));
-    final i = _store.indexWhere((t) => t.id == id);
-    if (i == -1) return;
-    _store[i] = _store[i].copyWith(releasedAt: DateTime.now());
+  Future<Thought> addThought({
+    required String content,
+    String category = ThoughtCategory.release,
+    String intensity = ThoughtIntensity.medium,
+  }) async {
+    final thought = Thought(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      userId: _mockUserId,
+      content: content,
+      category: category,
+      intensity: intensity,
+      createdAt: DateTime.now(),
+    );
+    _store.add(thought);
+    return thought;
   }
 
   @override
-  Future<void> create({
-    required String text,
-    required ThoughtKind kind,
-    ThoughtIntensity? intensity,
-  }) async {
-    _store.add(
-      Thought(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
-        text: text,
-        kind: kind,
-        intensity: intensity,
-        createdAt: DateTime.now(),
-      ),
-    );
+  Future<void> releaseThought(String id) async {
+    await Future.delayed(const Duration(milliseconds: 120));
+    final i = _store.indexWhere((t) => t.id == id);
+    if (i == -1) return;
+    _store[i] = _store[i].copyWith(isReleased: true);
   }
 
-  static final List<Thought> _seed = [
-    Thought(
-      id: 'r1',
-      text:
-          'Worried about the upcoming presentation and whether I prepared enough',
-      kind: ThoughtKind.release,
-      intensity: ThoughtIntensity.high,
-      createdAt: DateTime.now().subtract(const Duration(hours: 1)),
-    ),
-    Thought(
-      id: 'r2',
-      text: 'Feeling guilty about not calling mom back yesterday',
-      kind: ThoughtKind.release,
-      intensity: ThoughtIntensity.medium,
-      createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-    ),
-    Thought(
-      id: 'r3',
-      text: 'Anxious about what they think of me after that conversation',
-      kind: ThoughtKind.release,
-      intensity: ThoughtIntensity.high,
-      createdAt: DateTime.now().subtract(const Duration(hours: 5)),
-    ),
-    Thought(
-      id: 'r4',
-      text: 'Frustrated that I procrastinated on my assignment again',
-      kind: ThoughtKind.release,
-      intensity: ThoughtIntensity.medium,
-      createdAt: DateTime.now().subtract(const Duration(hours: 8)),
-    ),
-  ];
+  @override
+  Future<void> deleteThoughtPermanently(String id) async {
+    _store.removeWhere((t) => t.id == id);
+  }
 }

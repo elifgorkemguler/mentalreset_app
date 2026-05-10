@@ -49,7 +49,7 @@ class WelcomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
-          Text('Welcome to Mental Reset',
+          Text('Welcome to MindFlow',
               style: OnbTextStyles.h1Hero, textAlign: TextAlign.left),
           const SizedBox(height: 8),
           Text(

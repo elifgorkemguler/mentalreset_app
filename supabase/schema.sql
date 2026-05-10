@@ -1,5 +1,5 @@
 -- =============================================================================
--- Mental Reset — Supabase schema
+-- MindFlow — Supabase schema
 -- Run this in your Supabase SQL Editor (Project → SQL → New Query).
 -- It creates all tables, indexes, and Row-Level-Security policies the app
 -- needs. Safe to run multiple times.
@@ -29,16 +29,19 @@ create table if not exists public.mood_checkins (
 );
 
 -- -----------------------------------------------------------------------------
--- thoughts  — captured via Speak/Write, sorted into release / action / unsorted
+-- thoughts  — captured via Speak/Write, sorted into release / action / unsorted.
+-- A thought is "released" when is_released=true (drag-to-trash on the Release
+-- screen). We don't hard-delete, so Insights/history can still count it.
 -- -----------------------------------------------------------------------------
 create table if not exists public.thoughts (
   id           uuid primary key default gen_random_uuid(),
   user_id      uuid not null references auth.users(id) on delete cascade,
-  text         text not null,
-  kind         text not null default 'unsorted'
-                 check (kind in ('release', 'action', 'unsorted')),
-  intensity    text check (intensity in ('low', 'medium', 'high')),
-  released_at  timestamptz,
+  content      text not null,
+  category     text not null default 'release'
+                 check (category in ('release', 'action', 'unsorted')),
+  intensity    text not null default 'medium'
+                 check (intensity in ('low', 'medium', 'high')),
+  is_released  boolean not null default false,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
@@ -76,8 +79,8 @@ create table if not exists public.focus_sessions (
 -- -----------------------------------------------------------------------------
 -- Indexes
 -- -----------------------------------------------------------------------------
-create index if not exists idx_thoughts_user_kind
-  on public.thoughts (user_id, kind, released_at, created_at desc);
+create index if not exists idx_thoughts_user_category
+  on public.thoughts (user_id, category, is_released, created_at desc);
 
 create index if not exists idx_tasks_user_done
   on public.tasks (user_id, done_at, created_at desc);

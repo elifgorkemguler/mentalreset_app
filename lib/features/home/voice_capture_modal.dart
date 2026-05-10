@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_gradients.dart';
@@ -10,10 +11,19 @@ import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../data/repositories/supabase_thought_repository.dart';
+import '../../data/service_locator.dart';
+import '../../data/thought_feed.dart';
 import '../../widgets/primary_gradient_button.dart';
 
 enum _VoiceState { idle, listening, captured }
 
+/// Captures a thought via speech-to-text. The transcript flows into an
+/// editable [TextField] so the user can type, fix STT mistakes, or skip the
+/// mic entirely. On iOS the system needs `NSMicrophoneUsageDescription` and
+/// `NSSpeechRecognitionUsageDescription` (already in Info.plist). On Android
+/// we ship the `RECORD_AUDIO` permission and a `RecognitionService` query in
+/// the manifest.
 class VoiceCaptureModal extends StatefulWidget {
   const VoiceCaptureModal({super.key});
 
@@ -33,12 +43,17 @@ class VoiceCaptureModal extends StatefulWidget {
 
 class _VoiceCaptureModalState extends State<VoiceCaptureModal>
     with TickerProviderStateMixin {
+  final _speech = stt.SpeechToText();
+  final _ctrl = TextEditingController();
   late final AnimationController _pulseController;
   late final AnimationController _waveController;
 
   _VoiceState _state = _VoiceState.idle;
+  String _error = '';
+  bool _speechAvailable = false;
   Duration _elapsed = Duration.zero;
   Timer? _ticker;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -51,6 +66,41 @@ class _VoiceCaptureModalState extends State<VoiceCaptureModal>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
+    _ctrl.addListener(() => setState(() {}));
+    _initSpeech();
+  }
+
+  Future<void> _initSpeech() async {
+    try {
+      final ok = await _speech.initialize(
+        onError: (err) {
+          if (!mounted) return;
+          setState(() {
+            _error = err.errorMsg;
+            _state = _VoiceState.idle;
+          });
+          _stopTicker();
+          _pulseController.stop();
+          _waveController.stop();
+        },
+        onStatus: (status) {
+          if (!mounted) return;
+          if (status == 'notListening' && _state == _VoiceState.listening) {
+            _onStoppedListening();
+          }
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        _speechAvailable = ok;
+        if (!ok) {
+          _error = 'Speech recognition is not available on this device.';
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString());
+    }
   }
 
   @override
@@ -58,7 +108,14 @@ class _VoiceCaptureModalState extends State<VoiceCaptureModal>
     _pulseController.dispose();
     _waveController.dispose();
     _ticker?.cancel();
+    if (_speech.isListening) _speech.stop();
+    _ctrl.dispose();
     super.dispose();
+  }
+
+  void _stopTicker() {
+    _ticker?.cancel();
+    _ticker = null;
   }
 
   void _toggleListening() {
@@ -69,10 +126,13 @@ class _VoiceCaptureModalState extends State<VoiceCaptureModal>
     }
   }
 
-  void _startListening() {
+  Future<void> _startListening() async {
+    if (!_speechAvailable) return;
     HapticFeedback.mediumImpact();
     setState(() {
       _state = _VoiceState.listening;
+      _ctrl.clear();
+      _error = '';
       _elapsed = Duration.zero;
     });
     _pulseController.repeat();
@@ -81,26 +141,98 @@ class _VoiceCaptureModalState extends State<VoiceCaptureModal>
       if (!mounted) return;
       setState(() => _elapsed += const Duration(seconds: 1));
     });
+    await _speech.listen(
+      localeId: 'en_US',
+      listenFor: const Duration(minutes: 2),
+      pauseFor: const Duration(seconds: 6),
+      onResult: (result) {
+        if (!mounted) return;
+        _ctrl.value = TextEditingValue(
+          text: result.recognizedWords,
+          selection:
+              TextSelection.collapsed(offset: result.recognizedWords.length),
+        );
+      },
+      listenOptions: stt.SpeechListenOptions(
+        partialResults: true,
+        cancelOnError: true,
+      ),
+    );
   }
 
-  void _stopListening() {
+  Future<void> _stopListening() async {
     HapticFeedback.lightImpact();
-    _ticker?.cancel();
+    await _speech.stop();
+    _onStoppedListening();
+  }
+
+  void _onStoppedListening() {
+    if (!mounted) return;
+    _stopTicker();
     _pulseController.stop();
     _waveController.stop();
     setState(() {
-      _state = _elapsed == Duration.zero ? _VoiceState.idle : _VoiceState.captured;
+      _state = _ctrl.text.trim().isEmpty
+          ? _VoiceState.idle
+          : _VoiceState.captured;
     });
   }
 
+  bool get _canDone => _ctrl.text.trim().isNotEmpty && !_saving;
+
+  Future<void> _done() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty) return;
+    setState(() => _saving = true);
+
+    // Capture before any async gap — the modal context becomes invalid
+    // after Navigator.pop, but the parent messenger keeps working.
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    if (_speech.isListening) {
+      await _speech.stop();
+    }
+
+    try {
+      await ServiceLocator.thoughts.addThought(content: text);
+      ThoughtFeed.notifyChanged();
+      navigator.pop();
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text('Thought saved to Release.',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textOnPrimary)),
+          backgroundColor: AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+        ));
+    } on NotAuthenticatedException catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(e.toString())));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('Could not save: $e')));
+    }
+  }
+
   String _statusText() {
+    if (_error.isNotEmpty) return _error;
     switch (_state) {
       case _VoiceState.idle:
-        return 'Tap the mic to start';
+        return _speechAvailable
+            ? 'Tap the mic to start (English)'
+            : 'Initializing speech recognition...';
       case _VoiceState.listening:
         return 'Listening...';
       case _VoiceState.captured:
-        return 'Got it. Add more or tap Done.';
+        return 'Got it. Edit, add more, or tap Done.';
     }
   }
 
@@ -113,7 +245,6 @@ class _VoiceCaptureModalState extends State<VoiceCaptureModal>
   @override
   Widget build(BuildContext context) {
     final isListening = _state == _VoiceState.listening;
-    final hasCaptured = _state == _VoiceState.captured;
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -130,71 +261,119 @@ class _VoiceCaptureModalState extends State<VoiceCaptureModal>
         ),
         child: SafeArea(
           top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _DragHandle(),
-              const SizedBox(height: AppSpacing.lg),
-              Text('Capture Your Thoughts', style: AppTextStyles.headlineMedium),
-              const SizedBox(height: 6),
-              Text(
-                'Speak freely. We will sort it out together.',
-                style: AppTextStyles.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.xxl),
-              _PulsingMicButton(
-                pulse: _pulseController,
-                listening: isListening,
-                onTap: _toggleListening,
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                child: Text(
-                  _statusText(),
-                  key: ValueKey(_state),
-                  style: AppTextStyles.titleMedium,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(child: _DragHandle()),
+                const SizedBox(height: AppSpacing.lg),
+                Center(
+                  child: Text('Capture your thoughts',
+                      style: AppTextStyles.headlineMedium),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Speak in English or type below — both work.',
+                  style: AppTextStyles.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                _formatElapsed(),
-                style: AppTextStyles.labelMedium.copyWith(
-                  color: isListening ? AppColors.primary : AppColors.textMuted,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+                const SizedBox(height: AppSpacing.lg),
+                Center(
+                  child: _PulsingMicButton(
+                    pulse: _pulseController,
+                    listening: isListening,
+                    onTap: _toggleListening,
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              SizedBox(
-                height: 56,
-                child: _AudioWave(
-                  controller: _waveController,
-                  active: isListening,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xxl),
-              Row(
-                children: [
-                  Expanded(
-                    child: _SecondaryAction(
-                      label: 'Cancel',
-                      onTap: () => Navigator.of(context).pop(),
+                const SizedBox(height: AppSpacing.md),
+                Center(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    child: Text(
+                      _statusText(),
+                      key: ValueKey('${_state.name}_$_error'),
+                      style: AppTextStyles.titleMedium.copyWith(
+                        color: _error.isNotEmpty
+                            ? AppColors.error
+                            : AppColors.textPrimary,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: PrimaryGradientButton(
-                      label: 'Done',
-                      onPressed: hasCaptured
-                          ? () => Navigator.of(context).pop()
-                          : null,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Center(
+                  child: Text(
+                    _formatElapsed(),
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color:
+                          isListening ? AppColors.primary : AppColors.textMuted,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                SizedBox(
+                  height: 36,
+                  child: _AudioWave(
+                    controller: _waveController,
+                    active: isListening,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  'CAPTURED THOUGHT',
+                  style: AppTextStyles.labelMedium.copyWith(
+                    letterSpacing: 1.2,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceMuted,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    border: Border.all(color: AppColors.border, width: 1),
+                  ),
+                  padding: const EdgeInsets.all(AppSpacing.base),
+                  child: TextField(
+                    controller: _ctrl,
+                    maxLines: 5,
+                    minLines: 3,
+                    style: AppTextStyles.bodyLarge,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      isCollapsed: true,
+                      hintText:
+                          'Tap the mic and speak, or type here directly...',
+                      hintStyle: AppTextStyles.bodyMedium
+                          .copyWith(color: AppColors.textMuted),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _SecondaryAction(
+                        label: 'Cancel',
+                        onTap: () => Navigator.of(context).pop(),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: PrimaryGradientButton(
+                        label: 'Done',
+                        loading: _saving,
+                        onPressed: _canDone ? _done : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -230,8 +409,8 @@ class _PulsingMicButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 200,
-      height: 200,
+      width: 160,
+      height: 160,
       child: AnimatedBuilder(
         animation: pulse,
         builder: (context, child) {
@@ -248,8 +427,8 @@ class _PulsingMicButton extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeOut,
-            width: listening ? 120 : 110,
-            height: listening ? 120 : 110,
+            width: listening ? 100 : 92,
+            height: listening ? 100 : 92,
             decoration: BoxDecoration(
               gradient: AppGradients.primary,
               shape: BoxShape.circle,
@@ -258,7 +437,7 @@ class _PulsingMicButton extends StatelessWidget {
             child: Icon(
               listening ? Icons.stop_rounded : Icons.mic_rounded,
               color: Colors.white,
-              size: listening ? 44 : 48,
+              size: listening ? 38 : 40,
             ),
           ),
         ),
@@ -276,8 +455,8 @@ class _PulsingMicButton extends StatelessWidget {
         child: Transform.scale(
           scale: scale,
           child: Container(
-            width: 120,
-            height: 120,
+            width: 100,
+            height: 100,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
@@ -318,8 +497,8 @@ class _AudioWave extends StatelessWidget {
   }
 
   Widget _bar(int i) {
-    const baseHeight = 6.0;
-    const maxHeight = 48.0;
+    const baseHeight = 4.0;
+    const maxHeight = 32.0;
     double height;
     if (active) {
       final phase = controller.value * 2 * math.pi + i * 0.55;
