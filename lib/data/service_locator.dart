@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/supabase/supabase_config.dart';
@@ -21,9 +22,11 @@ class ServiceLocator {
       final client = Supabase.instance.client;
       thoughts = SupabaseThoughtRepository(client);
       moods = SupabaseMoodRepository(client);
+      debugPrint('[ServiceLocator] mode = SUPABASE (table: thoughts)');
     } else {
       thoughts = MockThoughtRepository();
       moods = MockMoodRepository();
+      debugPrint('[ServiceLocator] mode = MOCK (in-memory, lost on restart)');
     }
     _initialized = true;
   }

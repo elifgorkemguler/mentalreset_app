@@ -36,6 +36,17 @@ class _AuthTextFieldState extends State<AuthTextField> {
   late bool _hidden = widget.obscure;
 
   @override
+  void didUpdateWidget(AuthTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If this State object is reused for a different field (e.g. Flutter
+    // reconciling the Login/Sign-Up forms), re-sync the obscure flag so a
+    // visible field never inherits a password field's hidden state.
+    if (oldWidget.obscure != widget.obscure) {
+      _hidden = widget.obscure;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

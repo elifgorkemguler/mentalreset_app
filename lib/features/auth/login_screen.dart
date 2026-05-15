@@ -137,6 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: AppSpacing.xl),
                   if (_tab == 1) ...[
                     AuthTextField(
+                      key: const ValueKey('auth-field-name'),
                       label: 'Name',
                       hint: 'How should we call you?',
                       icon: Icons.person_outline_rounded,
@@ -146,6 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: AppSpacing.base),
                   ],
                   AuthTextField(
+                    key: const ValueKey('auth-field-email'),
                     label: 'Email',
                     hint: 'you@example.com',
                     icon: Icons.mail_outline_rounded,
@@ -157,6 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: AppSpacing.base),
                   AuthTextField(
+                    key: const ValueKey('auth-field-password'),
                     label: 'Password',
                     hint: 'At least 8 characters',
                     icon: Icons.lock_outline_rounded,

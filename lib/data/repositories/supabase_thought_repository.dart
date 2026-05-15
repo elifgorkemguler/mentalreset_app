@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../models/thought.dart';
@@ -15,6 +16,7 @@ class SupabaseThoughtRepository implements ThoughtRepository {
   final SupabaseClient _client;
   SupabaseThoughtRepository(this._client);
 
+  /// The app reads and writes the `thoughts` table — NOT `inputs`.
   static const _table = 'thoughts';
 
   String get _userId {
@@ -25,18 +27,27 @@ class SupabaseThoughtRepository implements ThoughtRepository {
 
   @override
   Future<List<Thought>> fetchReleaseThoughts() async {
-    final rows = await _client
-        .from(_table)
-        .select()
-        .eq('user_id', _userId)
-        .eq('category', ThoughtCategory.release)
-        .eq('is_released', false)
-        .order('created_at', ascending: false);
+    final userId = _userId;
+    debugPrint('[thoughts] fetchReleaseThoughts for user=$userId');
+    try {
+      final rows = await _client
+          .from(_table)
+          .select()
+          .eq('user_id', userId)
+          .eq('category', ThoughtCategory.release)
+          .eq('is_released', false)
+          .order('created_at', ascending: false);
 
-    return (rows as List)
-        .cast<Map<String, dynamic>>()
-        .map(Thought.fromMap)
-        .toList();
+      final list = (rows as List)
+          .cast<Map<String, dynamic>>()
+          .map(Thought.fromMap)
+          .toList();
+      debugPrint('[thoughts] fetched ${list.length} release row(s)');
+      return list;
+    } catch (e) {
+      debugPrint('[thoughts] fetch FAILED: $e');
+      rethrow;
+    }
   }
 
   @override
@@ -45,19 +56,27 @@ class SupabaseThoughtRepository implements ThoughtRepository {
     String category = ThoughtCategory.release,
     String intensity = ThoughtIntensity.medium,
   }) async {
-    final inserted = await _client
-        .from(_table)
-        .insert({
-          'user_id': _userId,
-          'content': content,
-          'category': category,
-          'intensity': intensity,
-          'is_released': false,
-        })
-        .select()
-        .single();
-
-    return Thought.fromMap(inserted);
+    final userId = _userId;
+    debugPrint('[thoughts] addThought user=$userId category=$category '
+        'content="${content.length > 40 ? '${content.substring(0, 40)}...' : content}"');
+    try {
+      final inserted = await _client
+          .from(_table)
+          .insert({
+            'user_id': userId,
+            'content': content,
+            'category': category,
+            'intensity': intensity,
+            'is_released': false,
+          })
+          .select()
+          .single();
+      debugPrint('[thoughts] inserted row id=${inserted['id']}');
+      return Thought.fromMap(inserted);
+    } catch (e) {
+      debugPrint('[thoughts] insert FAILED: $e');
+      rethrow;
+    }
   }
 
   @override
