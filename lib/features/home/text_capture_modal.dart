@@ -6,8 +6,10 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../data/repositories/supabase_thought_repository.dart';
 import '../../data/service_locator.dart';
+import '../../data/services/ai_service.dart';
 import '../../data/thought_feed.dart';
 import '../../widgets/primary_gradient_button.dart';
+import '../ai_sort/ai_sort_result_screen.dart';
 
 class TextCaptureModal extends StatefulWidget {
   const TextCaptureModal({super.key});
@@ -47,32 +49,62 @@ class _TextCaptureModalState extends State<TextCaptureModal> {
     super.dispose();
   }
 
-  bool get _canSave =>
-      _ctrl.text.trim().isNotEmpty && !_saving;
+  bool get _canSave => _ctrl.text.trim().isNotEmpty && !_saving;
 
   Future<void> _save() async {
     final text = _ctrl.text.trim();
     if (text.isEmpty) return;
     setState(() => _saving = true);
 
-    // Capture before any async gap — the modal context becomes invalid
-    // once we Navigator.pop, but the parent messenger keeps working.
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final rootContext = navigator.context;
 
     try {
-      await ServiceLocator.thoughts.addThought(content: text);
-      ThoughtFeed.notifyChanged();
+      // 1. Call AI to sort the thought
+      final result = await AiService.instance.sortThought(text);
+
+      if (!mounted) return;
+
+      // 2. Close the modal
       navigator.pop();
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(
-          content: Text('Thought saved to Release.',
+
+      // 3. Open the AI sort result screen
+      Navigator.of(rootContext).push(
+        MaterialPageRoute(
+          builder: (_) => AiSortResultScreen(
+            originalThought: text,
+            result: result,
+          ),
+          fullscreenDialog: true,
+        ),
+      );
+    } on AiServiceException catch (e) {
+      // AI failed — fall back to saving as a release thought
+      if (!mounted) return;
+      try {
+        await ServiceLocator.thoughts.addThought(content: text);
+        ThoughtFeed.notifyChanged();
+        if (!mounted) return;
+        navigator.pop();
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(
+            content: Text(
+              'AI unavailable, saved to Release.',
               style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.textOnPrimary)),
-          backgroundColor: AppColors.primary,
-          behavior: SnackBarBehavior.floating,
-        ));
+                  .copyWith(color: AppColors.textOnPrimary),
+            ),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+          ));
+      } catch (_) {
+        if (!mounted) return;
+        setState(() => _saving = false);
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text('Could not save: ${e.message}')));
+      }
     } on NotAuthenticatedException catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
@@ -150,19 +182,41 @@ class _TextCaptureModalState extends State<TextCaptureModal> {
                   ),
                 ),
               ),
+              if (_saving) ...[
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(AppColors.primary),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Sorting with AI...',
+                      style: AppTextStyles.bodyMedium
+                          .copyWith(color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: AppSpacing.lg),
               Row(
                 children: [
                   Expanded(
                     child: _SecondaryAction(
                       label: 'Cancel',
-                      onTap: () => Navigator.of(context).pop(),
+                      onTap: _saving ? () {} : () => Navigator.of(context).pop(),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: PrimaryGradientButton(
-                      label: 'Save',
+                      label: 'Sort with AI',
                       loading: _saving,
                       onPressed: _canSave ? _save : null,
                     ),

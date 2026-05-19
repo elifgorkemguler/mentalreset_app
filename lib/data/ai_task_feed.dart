@@ -1,0 +1,26 @@
+import 'package:flutter/foundation.dart';
+
+import '../models/task_item.dart';
+
+class AiTaskFeed {
+  AiTaskFeed._();
+  static final AiTaskFeed instance = AiTaskFeed._();
+
+  final ValueNotifier<List<TaskItem>> tasks = ValueNotifier<List<TaskItem>>([]);
+
+  void addAll(List<TaskItem> newTasks) {
+    if (newTasks.isEmpty) return;
+    final next = [...tasks.value, ...newTasks];
+    tasks.value = next;
+  }
+
+  void clear() {
+    tasks.value = const [];
+  }
+
+  void toggleDone(String id) {
+    tasks.value = tasks.value
+        .map((t) => t.id == id ? t.copyWith(done: !t.done) : t)
+        .toList();
+  }
+}
