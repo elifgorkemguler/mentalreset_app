@@ -100,7 +100,7 @@ class AuthService {
       await _client.auth.signOut();
     }
     await UserSession.instance.clear();
-    await OnboardingStorage.clear();
+    //await OnboardingStorage.clear();
     OnboardingData.instance.reset();
   }
 }

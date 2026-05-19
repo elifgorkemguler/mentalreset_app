@@ -54,6 +54,11 @@ class _ReleaseScreenState extends State<ReleaseScreen> {
     HapticFeedback.mediumImpact();
     final messenger = ScaffoldMessenger.of(context);
 
+// Optimistic: kartı UI'dan hemen sil
+    setState(() {
+      _future = _future.then((list) => list.where((th) => th.id != t.id).toList());
+    });
+
     try {
       await _repo.releaseThought(t.id);
     } on NotAuthenticatedException catch (e) {
