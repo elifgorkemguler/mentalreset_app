@@ -15,6 +15,8 @@ import '../../data/repositories/supabase_thought_repository.dart';
 import '../../data/service_locator.dart';
 import '../../data/thought_feed.dart';
 import '../../widgets/primary_gradient_button.dart';
+import '../../data/services/ai_service.dart';
+import '../ai_sort/ai_sort_result_screen.dart';
 
 enum _VoiceState { idle, listening, captured }
 
@@ -185,28 +187,58 @@ class _VoiceCaptureModalState extends State<VoiceCaptureModal>
     if (text.isEmpty) return;
     setState(() => _saving = true);
 
-    // Capture before any async gap — the modal context becomes invalid
-    // after Navigator.pop, but the parent messenger keeps working.
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final rootContext = navigator.context;
 
     if (_speech.isListening) {
       await _speech.stop();
     }
 
     try {
-      await ServiceLocator.thoughts.addThought(content: text);
-      ThoughtFeed.notifyChanged();
+      // 1. Call AI to sort the thought
+      final result = await AiService.instance.sortThought(text);
+
+      if (!mounted) return;
+
+      // 2. Close the modal
       navigator.pop();
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(
-          content: Text('Thought saved to Release.',
+
+      // 3. Open the AI sort result screen
+      Navigator.of(rootContext).push(
+        MaterialPageRoute(
+          builder: (_) => AiSortResultScreen(
+            originalThought: text,
+            result: result,
+          ),
+          fullscreenDialog: true,
+        ),
+      );
+    } on AiServiceException catch (e) {
+      if (!mounted) return;
+      try {
+        await ServiceLocator.thoughts.addThought(content: text);
+        ThoughtFeed.notifyChanged();
+        if (!mounted) return;
+        navigator.pop();
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(
+            content: Text(
+              'AI unavailable, saved to Release.',
               style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.textOnPrimary)),
-          backgroundColor: AppColors.primary,
-          behavior: SnackBarBehavior.floating,
-        ));
+                  .copyWith(color: AppColors.textOnPrimary),
+            ),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+          ));
+      } catch (_) {
+        if (!mounted) return;
+        setState(() => _saving = false);
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text('Could not save: ${e.message}')));
+      }
     } on NotAuthenticatedException catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
