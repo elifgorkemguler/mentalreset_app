@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../data/ai_task_feed.dart';
 import '../../models/task_item.dart';
 import 'data/task_recommender.dart';
 import 'widgets/todo_filter_chips.dart';
@@ -18,18 +19,54 @@ class TodoScreen extends StatefulWidget {
 
 class _TodoScreenState extends State<TodoScreen> {
   TaskCategory? _filter; // null = All
-  late final List<TaskItem> _tasks = TaskRecommender.recommend();
+
+  // Rule-based recommendations (from onboarding) — stable across the screen's life.
+  late final List<TaskItem> _ruleTasks = TaskRecommender.recommend();
+
+  // Local "done" overrides keyed by task id — applies to both AI and rule tasks.
+  final Map<String, bool> _doneOverrides = {};
+
+  @override
+  void initState() {
+    super.initState();
+    AiTaskFeed.instance.tasks.addListener(_onAiTasksChanged);
+  }
+
+  @override
+  void dispose() {
+    AiTaskFeed.instance.tasks.removeListener(_onAiTasksChanged);
+    super.dispose();
+  }
+
+  void _onAiTasksChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  /// Merged list: AI tasks first (newest first), then rule-based.
+  List<TaskItem> get _allTasks {
+    final aiTasks = AiTaskFeed.instance.tasks.value.reversed.toList();
+    final merged = <TaskItem>[...aiTasks, ..._ruleTasks];
+    return merged
+        .map((t) => _doneOverrides.containsKey(t.id)
+            ? t.copyWith(done: _doneOverrides[t.id])
+            : t)
+        .toList();
+  }
 
   List<TaskItem> get _visible {
-    if (_filter == null) return _tasks;
-    return _tasks.where((t) => t.category == _filter).toList();
+    final all = _allTasks;
+    if (_filter == null) return all;
+    return all.where((t) => t.category == _filter).toList();
   }
 
   void _toggleDone(String id) {
     setState(() {
-      final i = _tasks.indexWhere((t) => t.id == id);
-      if (i == -1) return;
-      _tasks[i] = _tasks[i].copyWith(done: !_tasks[i].done);
+      final current = _allTasks.firstWhere(
+        (t) => t.id == id,
+        orElse: () => _allTasks.first,
+      );
+      _doneOverrides[id] = !current.done;
     });
   }
 
@@ -49,6 +86,8 @@ class _TodoScreenState extends State<TodoScreen> {
   @override
   Widget build(BuildContext context) {
     final tasks = _visible;
+    final aiTaskCount = AiTaskFeed.instance.tasks.value.length;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -70,6 +109,7 @@ class _TodoScreenState extends State<TodoScreen> {
             _SummaryRow(
               count: tasks.length,
               totalLabel: _formatTotal(_totalRemaining),
+              aiCount: aiTaskCount,
             ),
             const SizedBox(height: AppSpacing.md),
             if (tasks.isEmpty)
@@ -92,17 +132,43 @@ class _TodoScreenState extends State<TodoScreen> {
 class _SummaryRow extends StatelessWidget {
   final int count;
   final String totalLabel;
+  final int aiCount;
 
-  const _SummaryRow({required this.count, required this.totalLabel});
+  const _SummaryRow({
+    required this.count,
+    required this.totalLabel,
+    required this.aiCount,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          '$count ${count == 1 ? "TASK" : "TASKS"}',
-          style: AppTextStyles.labelMedium,
+        Row(
+          children: [
+            Text(
+              '$count ${count == 1 ? "TASK" : "TASKS"}',
+              style: AppTextStyles.labelMedium,
+            ),
+            if (aiCount > 0) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.accentLavender,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '$aiCount AI',
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: AppColors.accentLavenderDeep,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         Text(
           totalLabel.toUpperCase(),
