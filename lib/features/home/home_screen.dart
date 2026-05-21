@@ -18,6 +18,7 @@ import '../../widgets/mood_chip_card.dart';
 import '../../widgets/section_header.dart';
 import '../../widgets/soft_card.dart';
 import '../auth/data/auth_service.dart';
+import '../settings/settings_screen.dart';
 import '../auth/data/user_session.dart';
 import 'text_capture_modal.dart';
 import 'voice_capture_modal.dart';
@@ -148,9 +149,28 @@ void _showAccountSheet(BuildContext context) {
               const SizedBox(height: AppSpacing.lg),
               ListTile(
                 contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.settings_outlined,
+                    color: AppColors.textPrimary),
+                title: Text('Settings', style: AppTextStyles.titleMedium),
+                trailing: const Icon(Icons.chevron_right,
+                    color: AppColors.textMuted, size: 20),
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const SettingsScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.logout_rounded,
                     color: AppColors.error),
-                title: Text('Sign out', style: AppTextStyles.titleMedium),
+                title: Text('Sign out',
+                    style: AppTextStyles.titleMedium
+                        .copyWith(color: AppColors.error)),
                 onTap: () async {
                   Navigator.of(sheetCtx).pop();
                   await AuthService.instance.signOut();

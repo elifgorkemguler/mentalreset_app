@@ -95,6 +95,9 @@ class AuthService {
     return AuthResult.signedIn();
   }
 
+  /// Convenience: email of the currently signed-in user, or null.
+  String? get currentUserEmail => _client.auth.currentUser?.email;
+  
   Future<void> signOut() async {
     if (_useSupabase && _client.auth.currentUser != null) {
       await _client.auth.signOut();
