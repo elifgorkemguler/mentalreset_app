@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_colors.dart';
 
-/// Inter typography for the onboarding flow only.
+/// Typography for the onboarding flow only.
 /// Sentence case, max weight 600. The rest of the app uses [AppTextStyles].
 class OnbTextStyles {
   OnbTextStyles._();
 
   static TextStyle _i(double size, FontWeight weight,
       {Color? color, double? height, double? letterSpacing}) {
-    return GoogleFonts.inter(
+    return TextStyle(
+      fontFamily: 'Poppins',
       fontSize: size,
       fontWeight: weight,
       color: color ?? AppColors.onbTextPrimary,

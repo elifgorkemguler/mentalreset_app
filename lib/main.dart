@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'app.dart';
 import 'core/supabase/supabase_init.dart';
@@ -11,19 +10,37 @@ import 'features/onboarding/data/onboarding_storage.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Don't fetch fonts over the network at runtime. Without this, devices
-  // without internet (e.g. fresh Android emulators with broken DNS) crash
-  // when google_fonts can't reach fonts.gstatic.com. With it off, we fall
-  // back to the system font silently. Bundle the .ttf files in assets/
-  // when you want the real Poppins look offline.
-  GoogleFonts.config.allowRuntimeFetching = false;
   FlutterError.onError = (details) {
     if (kDebugMode) FlutterError.dumpErrorToConsole(details);
   };
 
-  await SupabaseInit.maybeInitialize();
-  ServiceLocator.init();
-  await UserSession.instance.load();
-  await OnboardingStorage.load();
+  // Every startup step is wrapped so a single failure (no network, bad
+  // Supabase key, slow DNS) can never stop runApp() from being reached.
+  try {
+    await SupabaseInit.maybeInitialize()
+        .timeout(const Duration(seconds: 8));
+  } catch (e, st) {
+    debugPrint('[startup] Supabase init skipped: $e');
+    if (kDebugMode) debugPrintStack(stackTrace: st);
+  }
+
+  try {
+    ServiceLocator.init();
+  } catch (e) {
+    debugPrint('[startup] ServiceLocator init failed: $e');
+  }
+
+  try {
+    await UserSession.instance.load();
+  } catch (e) {
+    debugPrint('[startup] UserSession load failed: $e');
+  }
+
+  try {
+    await OnboardingStorage.load();
+  } catch (e) {
+    debugPrint('[startup] OnboardingStorage load failed: $e');
+  }
+
   runApp(const MindFlowApp());
 }

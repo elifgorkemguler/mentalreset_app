@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTextStyles {
   AppTextStyles._();
 
   static TextStyle _base(double size, FontWeight weight, {Color? color, double? height, double? letterSpacing}) {
-    return GoogleFonts.poppins(
+    return TextStyle(
+      fontFamily: 'Poppins',
       fontSize: size,
       fontWeight: weight,
       color: color ?? AppColors.textPrimary,

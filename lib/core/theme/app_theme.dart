@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 import 'app_text_styles.dart';
 
@@ -20,20 +19,22 @@ class AppTheme {
         error: AppColors.error,
         onError: AppColors.textOnPrimary,
       ),
-      textTheme: GoogleFonts.poppinsTextTheme(base.textTheme).copyWith(
-        displayLarge: AppTextStyles.displayLarge,
-        displayMedium: AppTextStyles.displayMedium,
-        headlineLarge: AppTextStyles.headlineLarge,
-        headlineMedium: AppTextStyles.headlineMedium,
-        titleLarge: AppTextStyles.titleLarge,
-        titleMedium: AppTextStyles.titleMedium,
-        bodyLarge: AppTextStyles.bodyLarge,
-        bodyMedium: AppTextStyles.bodyMedium,
-        bodySmall: AppTextStyles.bodySmall,
-        labelLarge: AppTextStyles.labelLarge,
-        labelMedium: AppTextStyles.labelMedium,
-        labelSmall: AppTextStyles.labelSmall,
-      ),
+      textTheme: base.textTheme
+          .apply(fontFamily: 'Poppins')
+          .copyWith(
+            displayLarge: AppTextStyles.displayLarge,
+            displayMedium: AppTextStyles.displayMedium,
+            headlineLarge: AppTextStyles.headlineLarge,
+            headlineMedium: AppTextStyles.headlineMedium,
+            titleLarge: AppTextStyles.titleLarge,
+            titleMedium: AppTextStyles.titleMedium,
+            bodyLarge: AppTextStyles.bodyLarge,
+            bodyMedium: AppTextStyles.bodyMedium,
+            bodySmall: AppTextStyles.bodySmall,
+            labelLarge: AppTextStyles.labelLarge,
+            labelMedium: AppTextStyles.labelMedium,
+            labelSmall: AppTextStyles.labelSmall,
+          ),
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.background,
         elevation: 0,

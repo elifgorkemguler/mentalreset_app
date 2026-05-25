@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -26,14 +29,78 @@ class _FocusScreenState extends State<FocusScreen> {
   static const _deepWorkDuration = Duration(minutes: 25);
   static const _breakDuration = Duration(minutes: 5);
 
-  Duration get _remaining => _sessionType == SessionType.deepWork
-      ? _deepWorkDuration
-      : _breakDuration;
+  Timer? _ticker;
+  late int _remainingSeconds;
 
-  void _togglePrimary() => setState(() => _started = !_started);
+  @override
+  void initState() {
+    super.initState();
+    _remainingSeconds = _durationFor(_sessionType).inSeconds;
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  Duration _durationFor(SessionType type) =>
+      type == SessionType.deepWork ? _deepWorkDuration : _breakDuration;
+
+  Duration get _remaining => Duration(seconds: _remainingSeconds);
+
+  void _togglePrimary() {
+    if (_started) {
+      _pause();
+    } else {
+      _start();
+    }
+  }
+
+  void _start() {
+    if (_remainingSeconds <= 0) {
+      _remainingSeconds = _durationFor(_sessionType).inSeconds;
+    }
+    setState(() => _started = true);
+    _ticker?.cancel();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_remainingSeconds <= 1) {
+        _ticker?.cancel();
+        _ticker = null;
+        setState(() {
+          _remainingSeconds = 0;
+          _started = false;
+        });
+        HapticFeedback.mediumImpact();
+      } else {
+        setState(() => _remainingSeconds--);
+      }
+    });
+  }
+
+  void _pause() {
+    _ticker?.cancel();
+    _ticker = null;
+    setState(() => _started = false);
+  }
 
   void _skip() {
-    setState(() => _started = false);
+    _ticker?.cancel();
+    _ticker = null;
+    setState(() {
+      _started = false;
+      _remainingSeconds = _durationFor(_sessionType).inSeconds;
+    });
+  }
+
+  void _changeSessionType(SessionType type) {
+    _ticker?.cancel();
+    _ticker = null;
+    setState(() {
+      _sessionType = type;
+      _started = false;
+      _remainingSeconds = _durationFor(type).inSeconds;
+    });
   }
 
   @override
@@ -56,9 +123,16 @@ class _FocusScreenState extends State<FocusScreen> {
               FocusModeSwitch(
                 value: _mode,
                 onChanged: (m) {
+                  if (m != FocusMode.timer) {
+                    _ticker?.cancel();
+                    _ticker = null;
+                  }
                   setState(() {
                     _mode = m;
-                    if (m == FocusMode.timer) _activeBreathing = null;
+                    if (m == FocusMode.timer) {
+                      _activeBreathing = null;
+                      _started = false;
+                    }
                   });
                 },
               ),
@@ -66,12 +140,7 @@ class _FocusScreenState extends State<FocusScreen> {
               if (_mode == FocusMode.timer)
                 FocusSessionCard(
                   sessionType: _sessionType,
-                  onSessionTypeChanged: (t) {
-                    setState(() {
-                      _sessionType = t;
-                      _started = false;
-                    });
-                  },
+                  onSessionTypeChanged: _changeSessionType,
                   currentTask: 'Finish assignment outline',
                   remaining: _remaining,
                   started: _started,
